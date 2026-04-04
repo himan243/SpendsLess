@@ -14,7 +14,9 @@ import '../../data/spends_controller.dart';
 import '../../shared/widgets/app_shell.dart';
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,76 +42,82 @@ class HomeScreen extends ConsumerWidget {
     final percent = limit <= 0 ? 0.0 : (todayTotal / limit) * 100;
     final reaction = budgetReactionFor(percent);
 
+    final content = SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 118),
+        children: [
+          _HeaderCard(
+            todayTotal: todayTotal,
+            limit: limit,
+            percent: percent,
+            reaction: reaction,
+            onEditLimit: () => _showLimitDialog(context, controller, limit),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'TODAY',
+                style: TextStyle(
+                  letterSpacing: 1.2,
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '${todayExpenses.length} txn${todayExpenses.length == 1 ? '' : 's'}',
+                style: const TextStyle(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (todayExpenses.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.surfaceBorder),
+              ),
+              child: const Column(
+                children: [
+                  Text('🫙', style: TextStyle(fontSize: 44)),
+                  SizedBox(height: 8),
+                  Text(
+                    'No spending logged today',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          for (final expense in todayExpenses)
+            _ExpenseTile(
+              expense: expense,
+              onDelete: () => _confirmDelete(context, controller, expense),
+            )
+                .animate()
+                .fadeIn(duration: 280.ms)
+                .slideY(begin: 0.1, duration: 280.ms),
+        ],
+      ),
+    );
+
+    if (embedded) {
+      return content;
+    }
+
     return AppShell(
       currentIndex: 0,
       onHome: () => context.go('/'),
       onStats: () => context.go('/stats'),
       onAdd: () => context.push('/add'),
       onSettings: () => context.go('/settings'),
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 118),
-          children: [
-            _HeaderCard(
-              todayTotal: todayTotal,
-              limit: limit,
-              percent: percent,
-              reaction: reaction,
-              onEditLimit: () => _showLimitDialog(context, controller, limit),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'TODAY',
-                  style: TextStyle(
-                    letterSpacing: 1.2,
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  '${todayExpenses.length} txn${todayExpenses.length == 1 ? '' : 's'}',
-                  style: const TextStyle(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (todayExpenses.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.surfaceBorder),
-                ),
-                child: const Column(
-                  children: [
-                    Text('🫙', style: TextStyle(fontSize: 44)),
-                    SizedBox(height: 8),
-                    Text(
-                      'No spending logged today',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            for (final expense in todayExpenses)
-              _ExpenseTile(
-                expense: expense,
-                onDelete: () => controller.deleteExpense(expense.id),
-              )
-                  .animate()
-                  .fadeIn(duration: 280.ms)
-                  .slideY(begin: 0.1, duration: 280.ms),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 
@@ -155,6 +163,41 @@ class HomeScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    SpendsController controller,
+    Expense expense,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Remove expense?'),
+          content: Text(
+            '${expense.amount.inRupees} • ${expense.category.label} • ${expense.spentAt.friendlyTime}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await controller.deleteExpense(expense.id);
   }
 }
 

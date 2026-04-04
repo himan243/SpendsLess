@@ -27,49 +27,64 @@ class AppShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: SafeArea(
         top: false,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.surfaceBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black45,
-                blurRadius: 24,
-                offset: Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Row(
+        child: SizedBox(
+          height: 132,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
             children: [
-              Expanded(
-                child: _NavButton(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  selected: currentIndex == 0,
-                  onTap: onHome,
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 14,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 24,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _NavButton(
+                          icon: Icons.home_rounded,
+                          label: 'Home',
+                          selected: currentIndex == 0,
+                          onTap: onHome,
+                        ),
+                      ),
+                      Expanded(
+                        child: _NavButton(
+                          icon: Icons.bar_chart_rounded,
+                          label: 'Stats',
+                          selected: currentIndex == 1,
+                          onTap: onStats,
+                        ),
+                      ),
+                      Expanded(
+                        child: _NavButton(
+                          icon: Icons.tune_rounded,
+                          label: 'Settings',
+                          selected: currentIndex == 2,
+                          onTap: onSettings,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Expanded(
-                child: _NavButton(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Stats',
-                  selected: currentIndex == 1,
-                  onTap: onStats,
-                ),
-              ),
-              Expanded(
+              Positioned(
+                bottom: 96,
                 child: _AddButton(onTap: onAdd),
-              ),
-              Expanded(
-                child: _NavButton(
-                  icon: Icons.tune_rounded,
-                  label: 'Settings',
-                  selected: currentIndex == 2,
-                  onTap: onSettings,
-                ),
               ),
             ],
           ),
@@ -95,25 +110,42 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.textPrimary : AppColors.textMuted;
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 260),
+      offset: selected ? const Offset(0, -0.04) : Offset.zero,
+      curve: Curves.easeOutCubic,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          width: 90,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.accent.withValues(alpha: 0.2)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            border: selected
+                ? Border.all(color: AppColors.accent.withValues(alpha: 0.55))
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: selected ? 23 : 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -127,32 +159,28 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Ink(
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.accent, AppColors.accentSecondary],
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x667C6BFF),
-                  blurRadius: 18,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(Icons.add_rounded, color: Colors.white, size: 30),
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 62,
+        height: 62,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.accent, AppColors.accentSecondary],
           ),
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x667C6BFF),
+              blurRadius: 22,
+              offset: Offset(0, 12),
+            ),
+          ],
+          border: Border.all(color: const Color(0x7AFFFFFF)),
+        ),
+        child: const Center(
+          child: Icon(Icons.add_rounded, color: Colors.white, size: 34),
         ),
       ),
     );

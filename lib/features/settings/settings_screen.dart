@@ -8,7 +8,9 @@ import '../../data/spends_controller.dart';
 import '../../shared/widgets/app_shell.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -38,118 +40,124 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final state = ref.watch(spendsControllerProvider);
     final controller = ref.read(spendsControllerProvider.notifier);
 
+    final content = SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 118),
+        children: [
+          const Text(
+            'Settings',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Profile Name',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                TextField(controller: _nameController),
+                const SizedBox(height: 14),
+                const Text(
+                  'Daily Limit (INR)',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _limitController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(prefixText: '₹ '),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Current: ${state.settings.dailyLimit.inRupees}',
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 14),
+                FilledButton(
+                  onPressed: () async {
+                    final nextLimit =
+                        double.tryParse(_limitController.text.trim()) ?? 0;
+                    if (nextLimit > 0) {
+                      await controller.updateDailyLimit(nextLimit);
+                    }
+                    await controller.updateDisplayName(_nameController.text);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Settings updated')),
+                    );
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Currency',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: const Text(
+                    'INR (₹)',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Danger Zone',
+                  style: TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmReset(context, controller),
+                  icon: const Icon(Icons.delete_forever_rounded),
+                  label: const Text('Reset all local data'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
     return AppShell(
       currentIndex: 2,
       onHome: () => context.go('/'),
       onStats: () => context.go('/stats'),
       onAdd: () => context.push('/add'),
       onSettings: () => context.go('/settings'),
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 118),
-          children: [
-            const Text(
-              'Settings',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Profile Name',
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(controller: _nameController),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Daily Limit (INR)',
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _limitController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(prefixText: '₹ '),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Current: ${state.settings.dailyLimit.inRupees}',
-                    style: const TextStyle(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton(
-                    onPressed: () async {
-                      final nextLimit =
-                          double.tryParse(_limitController.text.trim()) ?? 0;
-                      if (nextLimit > 0) {
-                        await controller.updateDailyLimit(nextLimit);
-                      }
-                      await controller.updateDisplayName(_nameController.text);
-                      if (!context.mounted) {
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Settings updated')),
-                      );
-                    },
-                    child: const Text('Save Changes'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Currency',
-                    style: TextStyle(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.surfaceBorder),
-                    ),
-                    child: const Text(
-                      'INR (₹)',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Danger Zone',
-                    style: TextStyle(
-                      color: AppColors.danger,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => _confirmReset(context, controller),
-                    icon: const Icon(Icons.delete_forever_rounded),
-                    label: const Text('Reset all local data'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 

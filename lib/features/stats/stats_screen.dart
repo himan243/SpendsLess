@@ -11,7 +11,9 @@ import '../../data/spends_controller.dart';
 import '../../shared/widgets/app_shell.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
-  const StatsScreen({super.key});
+  const StatsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<StatsScreen> createState() => _StatsScreenState();
@@ -54,158 +56,164 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
     final monthMax = monthlyTotals.fold<double>(1, (max, value) => value > max ? value : max);
 
+    final content = SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 118),
+        children: [
+          const Text(
+            'Your Stats',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _ToggleButton(
+                selected: _isMonth,
+                label: 'This Month',
+                onTap: () => setState(() => _isMonth = true),
+              ),
+              const SizedBox(width: 8),
+              _ToggleButton(
+                selected: !_isMonth,
+                label: 'This Year',
+                onTap: () => setState(() => _isMonth = false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total spent',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  total.inRupees,
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: SizedBox(
+              height: 220,
+              child: BarChart(
+                BarChartData(
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+                          final index = value.toInt();
+                          if (index < 0 || index > 11) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            labels[index],
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  gridData: const FlGridData(show: false),
+                  barGroups: List.generate(
+                    12,
+                    (index) => BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: monthMax == 0 ? 0 : monthlyTotals[index] / monthMax,
+                          borderRadius: BorderRadius.circular(99),
+                          width: 12,
+                          gradient: const LinearGradient(
+                            colors: [AppColors.accent, AppColors.accentSecondary],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  maxY: 1,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'By Category',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                if (categories.isEmpty)
+                  const Text(
+                    'No data in this range yet',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                for (final entry in categories)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Text(entry.key.emoji),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            entry.key.label,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Text(
+                          entry.value.inRupees,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
     return AppShell(
       currentIndex: 1,
       onHome: () => context.go('/'),
       onStats: () => context.go('/stats'),
       onAdd: () => context.push('/add'),
       onSettings: () => context.go('/settings'),
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 118),
-          children: [
-            const Text(
-              'Your Stats',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _ToggleButton(
-                  selected: _isMonth,
-                  label: 'This Month',
-                  onTap: () => setState(() => _isMonth = true),
-                ),
-                const SizedBox(width: 8),
-                _ToggleButton(
-                  selected: !_isMonth,
-                  label: 'This Year',
-                  onTap: () => setState(() => _isMonth = false),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total spent',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: AppColors.textMuted),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    total.inRupees,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: SizedBox(
-                height: 220,
-                child: BarChart(
-                  BarChartData(
-                    titlesData: FlTitlesData(
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-                            final index = value.toInt();
-                            if (index < 0 || index > 11) {
-                              return const SizedBox.shrink();
-                            }
-                            return Text(
-                              labels[index],
-                              style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 10,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    gridData: const FlGridData(show: false),
-                    barGroups: List.generate(
-                      12,
-                      (index) => BarChartGroupData(
-                        x: index,
-                        barRods: [
-                          BarChartRodData(
-                            toY: monthMax == 0 ? 0 : monthlyTotals[index] / monthMax,
-                            borderRadius: BorderRadius.circular(99),
-                            width: 12,
-                            gradient: const LinearGradient(
-                              colors: [AppColors.accent, AppColors.accentSecondary],
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    maxY: 1,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'By Category',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                  ),
-                  const SizedBox(height: 10),
-                  if (categories.isEmpty)
-                    const Text(
-                      'No data in this range yet',
-                      style: TextStyle(color: AppColors.textMuted),
-                    ),
-                  for (final entry in categories)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Text(entry.key.emoji),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              entry.key.label,
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          Text(
-                            entry.value.inRupees,
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 }

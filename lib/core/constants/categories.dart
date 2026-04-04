@@ -14,10 +14,10 @@ enum ExpenseCategory {
 extension ExpenseCategoryMeta on ExpenseCategory {
   String get label => switch (this) {
         ExpenseCategory.food => 'Food',
-        ExpenseCategory.delivery => 'Delivery',
+        ExpenseCategory.delivery => 'Fare',
         ExpenseCategory.travel => 'Travel',
         ExpenseCategory.shopping => 'Shopping',
-        ExpenseCategory.entertainment => 'Fun',
+        ExpenseCategory.entertainment => 'Entertainment',
         ExpenseCategory.health => 'Health',
         ExpenseCategory.bills => 'Bills',
         ExpenseCategory.other => 'Other',
