@@ -219,12 +219,23 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final capped = percent.clamp(0, 100).toDouble();
+    final toneStrength = (capped / 100) * 0.72;
+    final topTone = Color.lerp(
+      const Color(0xFF171726),
+      reaction.color.withValues(alpha: 0.34),
+      toneStrength,
+    )!;
+    final bottomTone = Color.lerp(
+      const Color(0xFF10101D),
+      reaction.color.withValues(alpha: 0.22),
+      toneStrength,
+    )!;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF171726), Color(0xFF10101D)],
+        gradient: LinearGradient(
+          colors: [topTone, bottomTone],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -289,7 +300,11 @@ class _HeaderCard extends StatelessWidget {
               Text(
                 reaction.emoji,
                 style: const TextStyle(fontSize: 54),
-              ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
+              )
+                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                  .moveY(begin: -1, end: 3, duration: 1700.ms, curve: Curves.easeInOut)
+                  .then()
+                  .shake(hz: 0.35, duration: 1900.ms, rotation: 0.012),
             ],
           ),
           const SizedBox(height: 8),

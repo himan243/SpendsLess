@@ -24,7 +24,12 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: child,
+      body: Stack(
+        children: [
+          const _AppBackdrop(),
+          Positioned.fill(child: child),
+        ],
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: SizedBox(
@@ -92,6 +97,145 @@ class AppShell extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AppBackdrop extends StatefulWidget {
+  const _AppBackdrop();
+
+  @override
+  State<_AppBackdrop> createState() => _AppBackdropState();
+}
+
+class _AppBackdropState extends State<_AppBackdrop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF08080F), Color(0xFF0B0B16), Color(0xFF08080F)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -70 + (t * 18),
+                left: -48 + (t * 22),
+                child: _GlowBlob(
+                  size: 170,
+                  colors: [
+                    AppColors.accent.withValues(alpha: 0.18),
+                    AppColors.accentSecondary.withValues(alpha: 0.04),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 120 + (t * -12),
+                right: -60 + (t * 16),
+                child: _GlowBlob(
+                  size: 220,
+                  colors: [
+                    AppColors.success.withValues(alpha: 0.10),
+                    AppColors.accent.withValues(alpha: 0.03),
+                  ],
+                ),
+              ),
+              Positioned(
+                bottom: 90 + (t * 18),
+                left: 24 + (t * -10),
+                child: _GlowBlob(
+                  size: 140,
+                  colors: [
+                    AppColors.warning.withValues(alpha: 0.10),
+                    AppColors.accentSecondary.withValues(alpha: 0.02),
+                  ],
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: 0.07,
+                    child: CustomPaint(
+                      painter: _GridPainter(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  const _GlowBlob({required this.size, required this.colors});
+
+  final double size;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: colors),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first,
+            blurRadius: 60,
+            spreadRadius: 18,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x33FFFFFF)
+      ..strokeWidth = 0.7;
+
+    const spacing = 36.0;
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _NavButton extends StatelessWidget {
