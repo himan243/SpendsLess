@@ -88,6 +88,12 @@ class SpendsController extends StateNotifier<SpendsState> {
     await _repository.saveSettings(updated);
   }
 
+  Future<void> updateAvatarId(String avatarId) async {
+    final updated = state.settings.copyWith(avatarId: avatarId.trim());
+    state = state.copyWith(settings: updated, error: null);
+    await _repository.saveSettings(updated);
+  }
+
   Future<void> updateCurrencyCode(String currencyCode) async {
     final updated = state.settings.copyWith(currencyCode: currencyCode.trim());
     state = state.copyWith(settings: updated, error: null);
@@ -107,6 +113,8 @@ class SpendsController extends StateNotifier<SpendsState> {
       paymentMethod: paymentMethod,
       note: note.trim(),
       spentAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      pendingSync: false,
     );
     final updated = [expense, ...state.expenses];
     state = state.copyWith(expenses: updated, error: null);

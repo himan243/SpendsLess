@@ -9,6 +9,12 @@ class Expense {
     required this.paymentMethod,
     required this.note,
     required this.spentAt,
+    this.userId,
+    this.deviceId,
+    this.version = 1,
+    required this.updatedAt,
+    this.deletedAt,
+    this.pendingSync = false,
   });
 
   final String id;
@@ -17,6 +23,12 @@ class Expense {
   final PaymentMethod paymentMethod;
   final String note;
   final DateTime spentAt;
+  final String? userId;
+  final String? deviceId;
+  final int version;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pendingSync;
 
   Expense copyWith({
     String? id,
@@ -25,6 +37,12 @@ class Expense {
     PaymentMethod? paymentMethod,
     String? note,
     DateTime? spentAt,
+    String? userId,
+    String? deviceId,
+    int? version,
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    bool? pendingSync,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -33,6 +51,12 @@ class Expense {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       note: note ?? this.note,
       spentAt: spentAt ?? this.spentAt,
+      userId: userId ?? this.userId,
+      deviceId: deviceId ?? this.deviceId,
+      version: version ?? this.version,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pendingSync: pendingSync ?? this.pendingSync,
     );
   }
 
@@ -43,6 +67,12 @@ class Expense {
         'paymentMethod': paymentMethod.name,
         'note': note,
         'spentAt': spentAt.toIso8601String(),
+        'userId': userId,
+        'deviceId': deviceId,
+        'version': version,
+        'updatedAt': updatedAt.toIso8601String(),
+        'deletedAt': deletedAt?.toIso8601String(),
+        'pendingSync': pendingSync,
       };
 
   factory Expense.fromJson(Map<String, dynamic> json) {
@@ -54,6 +84,16 @@ class Expense {
           PaymentMethod.values.byName(json['paymentMethod'] as String),
       note: (json['note'] as String?) ?? '',
       spentAt: DateTime.parse(json['spentAt'] as String),
+      userId: json['userId'] as String?,
+      deviceId: json['deviceId'] as String?,
+      version: (json['version'] as num?)?.toInt() ?? 1,
+      updatedAt: DateTime.parse(
+        (json['updatedAt'] as String?) ?? (json['spentAt'] as String),
+      ),
+      deletedAt: json['deletedAt'] == null
+          ? null
+          : DateTime.parse(json['deletedAt'] as String),
+      pendingSync: (json['pendingSync'] as bool?) ?? false,
     );
   }
 }

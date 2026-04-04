@@ -25,6 +25,7 @@ class HomeScreen extends ConsumerWidget {
     final displayName = state.settings.displayName.trim().isEmpty
         ? 'SpendsLess'
         : state.settings.displayName.trim();
+    final avatarId = state.settings.avatarId;
 
     if (state.isLoading) {
       return const Scaffold(
@@ -51,7 +52,13 @@ class HomeScreen extends ConsumerWidget {
         children: [
           _HomeTopBar(
             displayName: displayName,
-            onProfileTap: () => _showProfileSheet(context, displayName),
+            avatarId: avatarId,
+            onProfileTap: () => _showProfileSheet(
+              context,
+              controller,
+              displayName,
+              avatarId,
+            ),
           ),
           const SizedBox(height: 16),
           _HeaderCard(
@@ -208,112 +215,171 @@ class HomeScreen extends ConsumerWidget {
     await controller.deleteExpense(expense.id);
   }
 
-  Future<void> _showProfileSheet(BuildContext context, String displayName) async {
+  Future<void> _showProfileSheet(
+    BuildContext context,
+    SpendsController controller,
+    String displayName,
+    String avatarId,
+  ) async {
+    final nameController = TextEditingController(text: displayName);
+    var selectedAvatar = avatarId;
+
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.surfaceBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black54,
-                blurRadius: 28,
-                offset: Offset(0, 16),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.surfaceBorder),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 28,
+                    offset: Offset(0, 16),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _AvatarBadge(name: displayName, size: 54),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Profile',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
+                    Row(
+                      children: [
+                        _AvatarBadge(
+                          name: nameController.text.trim().isEmpty
+                              ? 'SpendsLess'
+                              : nameController.text.trim(),
+                          avatarId: selectedAvatar,
+                          size: 54,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Edit Profile',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Changes save locally on this device.',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Display name',
                       ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Choose avatar',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (final option in _avatarChoices)
+                          _AvatarChoiceChip(
+                            option: option,
+                            selected: selectedAvatar == option.id,
+                            onTap: () => setModalState(() {
+                              selectedAvatar = option.id;
+                            }),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () async {
+                              final nextName = nameController.text.trim();
+                              if (nextName.isNotEmpty) {
+                                await controller.updateDisplayName(nextName);
+                              }
+                              await controller.updateAvatarId(selectedAvatar);
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child: const Text('Save'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF141420), Color(0xFF0E0E1A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  child: const Text(
-                    'Your avatar is generated from your profile name for now. A future auth pass can replace this with a real uploaded avatar.',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          context.go('/settings');
-                        },
-                        icon: const Icon(Icons.tune_rounded),
-                        label: const Text('Open Settings'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
+
+    nameController.dispose();
   }
 }
+
+class _AvatarOption {
+  const _AvatarOption({required this.id, required this.emoji});
+
+  final String id;
+  final String emoji;
+}
+
+const _avatarChoices = <_AvatarOption>[
+  _AvatarOption(id: 'spark', emoji: '✨'),
+  _AvatarOption(id: 'fox', emoji: '🦊'),
+  _AvatarOption(id: 'cat', emoji: '🐱'),
+  _AvatarOption(id: 'robot', emoji: '🤖'),
+  _AvatarOption(id: 'ninja', emoji: '🥷'),
+  _AvatarOption(id: 'owl', emoji: '🦉'),
+];
 
 class _HomeTopBar extends StatelessWidget {
   const _HomeTopBar({
     required this.displayName,
+    required this.avatarId,
     required this.onProfileTap,
   });
 
   final String displayName;
+  final String avatarId;
   final VoidCallback onProfileTap;
 
   @override
@@ -356,6 +422,7 @@ class _HomeTopBar extends StatelessWidget {
           ),
           _ProfileAvatarButton(
             displayName: displayName,
+            avatarId: avatarId,
             onTap: onProfileTap,
           ),
         ],
@@ -367,10 +434,12 @@ class _HomeTopBar extends StatelessWidget {
 class _ProfileAvatarButton extends StatelessWidget {
   const _ProfileAvatarButton({
     required this.displayName,
+    required this.avatarId,
     required this.onTap,
   });
 
   final String displayName;
+  final String avatarId;
   final VoidCallback onTap;
 
   @override
@@ -382,7 +451,7 @@ class _ProfileAvatarButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         child: Padding(
           padding: const EdgeInsets.all(3),
-          child: _AvatarBadge(name: displayName, size: 42),
+          child: _AvatarBadge(name: displayName, avatarId: avatarId, size: 42),
         ),
       ),
     );
@@ -390,9 +459,14 @@ class _ProfileAvatarButton extends StatelessWidget {
 }
 
 class _AvatarBadge extends StatelessWidget {
-  const _AvatarBadge({required this.name, required this.size});
+  const _AvatarBadge({
+    required this.name,
+    required this.avatarId,
+    required this.size,
+  });
 
   final String name;
+  final String avatarId;
   final double size;
 
   int _seedFor(String value) {
@@ -432,6 +506,13 @@ class _AvatarBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _palette(name);
+    String? avatar;
+    for (final choice in _avatarChoices) {
+      if (choice.id == avatarId) {
+        avatar = choice.emoji;
+        break;
+      }
+    }
     return Container(
       width: size,
       height: size,
@@ -455,14 +536,58 @@ class _AvatarBadge extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
       ),
       child: Center(
-        child: Text(
-          _initials(name),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-            letterSpacing: 0.4,
+        child: avatar == null
+            ? Text(
+                _initials(name),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  letterSpacing: 0.4,
+                ),
+              )
+            : Text(
+                avatar,
+                style: TextStyle(fontSize: size * 0.48),
+              ),
+      ),
+    );
+  }
+}
+
+class _AvatarChoiceChip extends StatelessWidget {
+  const _AvatarChoiceChip({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _AvatarOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 54,
+          height: 54,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected
+                ? AppColors.accent.withValues(alpha: 0.24)
+                : AppColors.background,
+            border: Border.all(
+              color: selected ? AppColors.accent : AppColors.surfaceBorder,
+              width: selected ? 2 : 1,
+            ),
           ),
+          child: Text(option.emoji, style: const TextStyle(fontSize: 26)),
         ),
       ),
     );

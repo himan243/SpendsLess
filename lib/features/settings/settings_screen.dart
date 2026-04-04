@@ -19,13 +19,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _nameController = TextEditingController();
   final _limitController = TextEditingController();
+  bool _didInitControllers = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_didInitControllers) {
+      return;
+    }
     final state = ref.read(spendsControllerProvider);
     _nameController.text = state.settings.displayName;
     _limitController.text = state.settings.dailyLimit.toStringAsFixed(0);
+    _didInitControllers = true;
   }
 
   @override
