@@ -22,6 +22,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(spendsControllerProvider);
     final controller = ref.read(spendsControllerProvider.notifier);
+    final displayName = state.settings.displayName.trim().isEmpty
+        ? 'SpendsLess'
+        : state.settings.displayName.trim();
 
     if (state.isLoading) {
       return const Scaffold(
@@ -46,6 +49,11 @@ class HomeScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 118),
         children: [
+          _HomeTopBar(
+            displayName: displayName,
+            onProfileTap: () => _showProfileSheet(context, displayName),
+          ),
+          const SizedBox(height: 16),
           _HeaderCard(
             todayTotal: todayTotal,
             limit: limit,
@@ -198,6 +206,266 @@ class HomeScreen extends ConsumerWidget {
     }
 
     await controller.deleteExpense(expense.id);
+  }
+
+  Future<void> _showProfileSheet(BuildContext context, String displayName) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.surfaceBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _AvatarBadge(name: displayName, size: 54),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Profile',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF141420), Color(0xFF0E0E1A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: const Text(
+                    'Your avatar is generated from your profile name for now. A future auth pass can replace this with a real uploaded avatar.',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          context.go('/settings');
+                        },
+                        icon: const Icon(Icons.tune_rounded),
+                        label: const Text('Open Settings'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeTopBar extends StatelessWidget {
+  const _HomeTopBar({
+    required this.displayName,
+    required this.onProfileTap,
+  });
+
+  final String displayName;
+  final VoidCallback onProfileTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.surfaceBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'SpendsLess',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Track clean. Spend smarter.',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _ProfileAvatarButton(
+            displayName: displayName,
+            onTap: onProfileTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileAvatarButton extends StatelessWidget {
+  const _ProfileAvatarButton({
+    required this.displayName,
+    required this.onTap,
+  });
+
+  final String displayName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: _AvatarBadge(name: displayName, size: 42),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarBadge extends StatelessWidget {
+  const _AvatarBadge({required this.name, required this.size});
+
+  final String name;
+  final double size;
+
+  int _seedFor(String value) {
+    var seed = 0;
+    for (final unit in value.codeUnits) {
+      seed += unit;
+    }
+    return seed;
+  }
+
+  List<Color> _palette(String value) {
+    final palettes = <List<Color>>[
+      [AppColors.accent, AppColors.accentSecondary],
+      [AppColors.success, const Color(0xFF22C55E)],
+      [const Color(0xFF38BDF8), const Color(0xFF0EA5E9)],
+      [const Color(0xFFF59E0B), const Color(0xFFF97316)],
+      [const Color(0xFFEC4899), const Color(0xFFA855F7)],
+    ];
+    return palettes[_seedFor(value) % palettes.length];
+  }
+
+  String _initials(String value) {
+    final parts = value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) {
+      return 'SL';
+    }
+    if (parts.length == 1) {
+      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _palette(name);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            colors.first.withValues(alpha: 0.98),
+            colors.last.withValues(alpha: 0.95),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.22),
+            blurRadius: 18,
+            spreadRadius: 1,
+          ),
+        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+      ),
+      child: Center(
+        child: Text(
+          _initials(name),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ),
+    );
   }
 }
 
