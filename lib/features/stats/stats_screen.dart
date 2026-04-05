@@ -21,6 +21,7 @@ class StatsScreen extends ConsumerStatefulWidget {
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
   bool _isMonth = true;
+  ExpenseCategory? _selectedCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +29,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final now = DateTime.now();
 
     final active = state.expenses.where((expense) {
-      if (_isMonth) {
-        return expense.spentAt.isSameMonth(now);
-      }
-      return expense.spentAt.isSameYear(now);
+      // Filter by date range
+      final dateMatch = _isMonth
+          ? expense.spentAt.isSameMonth(now)
+          : expense.spentAt.isSameYear(now);
+
+      // Filter by category
+      final categoryMatch =
+          _selectedCategory == null || expense.category == _selectedCategory;
+
+      return dateMatch && categoryMatch;
     }).toList(growable: false);
 
     final total = active.fold<double>(0, (sum, expense) => sum + expense.amount);
@@ -79,6 +86,41 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 onTap: () => setState(() => _isMonth = false),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          // Category filter dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.surfaceBorder),
+            ),
+            child: DropdownButton<ExpenseCategory?>(
+              value: _selectedCategory,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              items: [
+                const DropdownMenuItem<ExpenseCategory?>(
+                  value: null,
+                  child: Text('All Categories'),
+                ),
+                for (final category in allExpenseCategories)
+                  DropdownMenuItem<ExpenseCategory?>(
+                    value: category,
+                    child: Row(
+                      children: [
+                        Text(category.emoji),
+                        const SizedBox(width: 8),
+                        Text(category.label),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedCategory = value);
+              },
+            ),
           ),
           const SizedBox(height: 14),
           _Card(
@@ -192,6 +234,71 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                             color: AppColors.textMuted,
                             fontWeight: FontWeight.w700,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'All Transactions',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                if (active.isEmpty)
+                  const Text(
+                    'No transactions in this range',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                for (final expense in active)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Text(expense.category.emoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                expense.category.label,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              if (expense.note.isNotEmpty)
+                                Text(
+                                  expense.note,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              expense.amount.inRupees,
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            Text(
+                              '${expense.spentAt.day}/${expense.spentAt.month}',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

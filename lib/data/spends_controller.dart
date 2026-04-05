@@ -57,6 +57,57 @@ class SpendsController extends StateNotifier<SpendsState> {
   final SpendsRepository _repository;
   static const Uuid _uuid = Uuid();
 
+  /// Calculates daily limit from monthly limit based on days in current month.
+  static double calculateDailyFromMonthly(double monthlyLimit) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    return monthlyLimit / daysInMonth;
+  }
+
+  /// Calculates monthly limit from daily limit based on days in current month.
+  static double calculateMonthlyFromDaily(double dailyLimit) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    return dailyLimit * daysInMonth;
+  }
+
+  /// Calculates today's dynamic daily limit in monthly mode.
+  ///
+  /// Formula:
+  /// - spentBeforeToday = sum(expenses in current month before today)
+  /// - remainingBudget = monthlyLimit - spentBeforeToday
+  /// - daysRemainingIncludingToday = daysInMonth - today + 1
+  /// - daily = max(0, remainingBudget) / daysRemainingIncludingToday
+  static double calculateDynamicDailyFromMonthly({
+    required double monthlyLimit,
+    required List<Expense> expenses,
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    final startOfToday = DateTime(current.year, current.month, current.day);
+    final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
+    final daysRemainingIncludingToday = daysInMonth - current.day + 1;
+    if (daysRemainingIncludingToday <= 0) {
+      return 0;
+    }
+
+    final spentBeforeToday = expenses
+        .where(
+          (expense) =>
+              expense.spentAt.year == current.year &&
+              expense.spentAt.month == current.month &&
+              expense.spentAt.isBefore(startOfToday),
+        )
+        .fold<double>(0, (sum, expense) => sum + expense.amount);
+
+    final remainingBudget = monthlyLimit - spentBeforeToday;
+    if (remainingBudget <= 0) {
+      return 0;
+    }
+
+    return remainingBudget / daysRemainingIncludingToday;
+  }
+
   Future<void> load() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
@@ -77,7 +128,26 @@ class SpendsController extends StateNotifier<SpendsState> {
   }
 
   Future<void> updateDailyLimit(double limit) async {
-    final updated = state.settings.copyWith(dailyLimit: limit);
+    final monthlyLimit = calculateMonthlyFromDaily(limit);
+    final updated = state.settings.copyWith(
+      dailyLimit: limit,
+      monthlyLimit: monthlyLimit,
+      limitMode: LimitMode.daily,
+    );
+    state = state.copyWith(settings: updated, error: null);
+    await _repository.saveSettings(updated);
+  }
+
+  Future<void> updateMonthlyLimit(double limit) async {
+    final dailyLimit = calculateDynamicDailyFromMonthly(
+      monthlyLimit: limit,
+      expenses: state.expenses,
+    );
+    final updated = state.settings.copyWith(
+      monthlyLimit: limit,
+      dailyLimit: dailyLimit,
+      limitMode: LimitMode.monthly,
+    );
     state = state.copyWith(settings: updated, error: null);
     await _repository.saveSettings(updated);
   }

@@ -10,6 +10,7 @@ import '../../core/extensions/date_ext.dart';
 import '../../core/extensions/num_ext.dart';
 import '../../core/utils/emoji_reactor.dart';
 import '../../data/models/expense.dart';
+import '../../data/models/user_settings.dart';
 import '../../data/spends_controller.dart';
 import '../../shared/widgets/app_shell.dart';
 
@@ -42,7 +43,14 @@ class HomeScreen extends ConsumerWidget {
       0,
       (sum, expense) => sum + expense.amount,
     );
-    final limit = state.settings.dailyLimit;
+    // Calculate daily limit based on mode
+    final limit = state.settings.limitMode == LimitMode.monthly
+        ? SpendsController.calculateDynamicDailyFromMonthly(
+            monthlyLimit: state.settings.monthlyLimit,
+            expenses: state.expenses,
+            now: now,
+          )
+        : state.settings.dailyLimit;
     final percent = limit <= 0 ? 0.0 : (todayTotal / limit) * 100;
     final reaction = budgetReactionFor(percent);
 

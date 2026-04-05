@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../core/extensions/num_ext.dart';
+import '../../data/models/user_settings.dart';
 import '../../data/spends_controller.dart';
 import '../../shared/widgets/app_shell.dart';
 
@@ -20,6 +21,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _nameController = TextEditingController();
   final _limitController = TextEditingController();
   bool _didInitControllers = false;
+  late bool _isMonthlyMode;
 
   @override
   void didChangeDependencies() {
@@ -29,7 +31,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     final state = ref.read(spendsControllerProvider);
     _nameController.text = state.settings.displayName;
-    _limitController.text = state.settings.dailyLimit.toStringAsFixed(0);
+    _isMonthlyMode = state.settings.limitMode == LimitMode.monthly;
+    final limitValue =
+        _isMonthlyMode ? state.settings.monthlyLimit : state.settings.dailyLimit;
+    _limitController.text = limitValue.toStringAsFixed(0);
     _didInitControllers = true;
   }
 
@@ -44,6 +49,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(spendsControllerProvider);
     final controller = ref.read(spendsControllerProvider.notifier);
+    final currentDailyLimit = state.settings.limitMode == LimitMode.monthly
+        ? SpendsController.calculateDynamicDailyFromMonthly(
+            monthlyLimit: state.settings.monthlyLimit,
+            expenses: state.expenses,
+          )
+        : state.settings.dailyLimit;
 
     final content = SafeArea(
       child: ListView(
@@ -66,8 +77,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 TextField(controller: _nameController),
                 const SizedBox(height: 14),
                 const Text(
-                  'Daily Limit (INR)',
+                  'Budget Mode',
                   style: TextStyle(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SegmentedButton<bool>(
+                        selected: {_isMonthlyMode},
+                        onSelectionChanged: (selection) {
+                          setState(() {
+                            _isMonthlyMode = selection.first;
+                            final settings = ref.read(spendsControllerProvider).settings;
+                            final limitValue = _isMonthlyMode
+                                ? settings.monthlyLimit
+                                : settings.dailyLimit;
+                            _limitController.text = limitValue.toStringAsFixed(0);
+                          });
+                        },
+                        segments: const [
+                          ButtonSegment(
+                            value: false,
+                            label: Text('Daily'),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text('Monthly'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  _isMonthlyMode ? 'Monthly Limit (INR)' : 'Daily Limit (INR)',
+                  style: const TextStyle(color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -77,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Current: ${state.settings.dailyLimit.inRupees}',
+                  'Current: ${currentDailyLimit.inRupees}/day',
                   style: const TextStyle(color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 14),
@@ -86,7 +132,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     final nextLimit =
                         double.tryParse(_limitController.text.trim()) ?? 0;
                     if (nextLimit > 0) {
-                      await controller.updateDailyLimit(nextLimit);
+                      if (_isMonthlyMode) {
+                        await controller.updateMonthlyLimit(nextLimit);
+                      } else {
+                        await controller.updateDailyLimit(nextLimit);
+                      }
                     }
                     await controller.updateDisplayName(_nameController.text);
                     if (!context.mounted) {
