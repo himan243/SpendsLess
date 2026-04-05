@@ -1,4 +1,4 @@
-package com.example.spendsless
+package com.himan.spendsless
 
 import io.flutter.embedding.android.FlutterActivity
 
